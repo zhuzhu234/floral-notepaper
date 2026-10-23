@@ -1135,7 +1135,7 @@ impl NoteStore {
             global_shortcut: "Ctrl+Space".into(),
             close_to_tray: true,
             autostart: false,
-            default_view_mode: "split".into(),
+            default_view_mode: "live".into(),
             note_auto_save: true,
             note_surface_auto_save: true,
             tile_color: default_tile_color(),

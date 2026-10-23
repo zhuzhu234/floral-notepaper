@@ -105,8 +105,10 @@
       "codeText": "程式碼",
       "headingText": "標題",
       "italicText": "斜體文字",
+      "linkText": "連結文字",
       "listItem": "清單項目",
-      "quoteText": "引用文字"
+      "quoteText": "引用文字",
+      "strikeText": "刪除線文字"
     },
     "search": {
       "empty": "還沒有筆記",
@@ -122,6 +124,33 @@
       "cleanUnused": "清理未使用圖片",
       "cleaned": "已清理 {{count}} 張圖片",
       "cleanedNone": "沒有需要清理的圖片"
+    },
+    "slash": {
+      "insert": "插入區塊",
+      "commands": {
+        "text": "正文",
+        "h1": "標題 1",
+        "h2": "標題 2",
+        "h3": "標題 3",
+        "ul": "無序清單",
+        "ol": "有序清單",
+        "task": "待辦事項",
+        "quote": "引用",
+        "code": "程式碼區塊",
+        "table": "表格",
+        "hr": "分隔線",
+        "math": "公式區塊"
+      },
+      "table": {
+        "column": "欄 {{index}}",
+        "cell": "內容",
+        "pick": "選擇表格尺寸",
+        "size": "{{columns}} 欄 × {{rows}} 行",
+        "hint": "方向鍵調整，回車插入"
+      },
+      "searchPlaceholder": "搜尋區塊…",
+      "empty": "沒有符合的區塊",
+      "back": "返回"
     },
     "statusBar": {
       "byteSize": "{{size}} KB",
@@ -144,8 +173,10 @@
       "hr": "分隔線",
       "inlineMath": "行內公式",
       "italic": "斜體",
+      "link": "連結",
       "ol": "有序清單",
       "quote": "引用",
+      "strike": "刪除線",
       "ul": "無序清單"
     },
     "window": {

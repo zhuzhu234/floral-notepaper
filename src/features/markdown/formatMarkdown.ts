@@ -3,6 +3,8 @@ import type { TFunction } from "i18next";
 export type MarkdownFormatAction =
   | "bold"
   | "italic"
+  | "strike"
+  | "link"
   | "heading"
   | "hr"
   | "ul"
@@ -55,6 +57,30 @@ export function applyMarkdownFormat(
       result = before + wrapped + after;
       cursorStart = start + 1;
       cursorEnd = cursorStart + (selected || fallback).length;
+      break;
+    }
+    case "strike": {
+      const fallback = translate("main.formatSample.strikeText", { defaultValue: "删除线文本" });
+      const wrapped = `~~${selected || fallback}~~`;
+      result = before + wrapped + after;
+      cursorStart = start + 2;
+      cursorEnd = cursorStart + (selected || fallback).length;
+      break;
+    }
+    case "link": {
+      // 选中文字直接变成链接文字，光标落在 `()` 里填地址；
+      // 没选中时插入占位文字并整段选中，方便直接覆盖
+      const text =
+        selected || translate("main.formatSample.linkText", { defaultValue: "链接文字" });
+      const wrapped = `[${text}]()`;
+      result = before + wrapped + after;
+      if (selected) {
+        // 跳到括号内，用户直接粘贴 URL 即可
+        cursorStart = cursorEnd = start + text.length + 3;
+      } else {
+        cursorStart = start + 1;
+        cursorEnd = cursorStart + text.length;
+      }
       break;
     }
     case "heading": {

@@ -105,8 +105,10 @@
       "codeText": "Code",
       "headingText": "Heading",
       "italicText": "Italic text",
+      "linkText": "Link text",
       "listItem": "List item",
-      "quoteText": "Blockquote"
+      "quoteText": "Blockquote",
+      "strikeText": "Strikethrough text"
     },
     "search": {
       "empty": "No notes yet",
@@ -122,6 +124,33 @@
       "cleanUnused": "Clean unused images",
       "cleaned": "Cleaned {{count}} image(s)",
       "cleanedNone": "No unused images"
+    },
+    "slash": {
+      "insert": "Insert block",
+      "commands": {
+        "text": "Text",
+        "h1": "Heading 1",
+        "h2": "Heading 2",
+        "h3": "Heading 3",
+        "ul": "Bullet list",
+        "ol": "Numbered list",
+        "task": "To-do",
+        "quote": "Quote",
+        "code": "Code block",
+        "table": "Table",
+        "hr": "Divider",
+        "math": "Math block"
+      },
+      "table": {
+        "column": "Column {{index}}",
+        "cell": "content",
+        "pick": "Choose table size",
+        "size": "{{columns}} × {{rows}}",
+        "hint": "Arrow keys to resize, Enter to insert"
+      },
+      "searchPlaceholder": "Search blocks…",
+      "empty": "No matching block",
+      "back": "Back"
     },
     "statusBar": {
       "byteSize": "{{size}} KB",
@@ -144,8 +173,10 @@
       "hr": "Horizontal rule",
       "inlineMath": "Inline math",
       "italic": "Italic",
+      "link": "Link",
       "ol": "Ordered list",
       "quote": "Blockquote",
+      "strike": "Strikethrough",
       "ul": "Unordered list"
     },
     "window": {

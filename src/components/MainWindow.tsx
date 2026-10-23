@@ -19,6 +19,14 @@ import { MarkdownEditorLazy as MarkdownEditor } from "../features/markdown/Markd
 import type { MarkdownEditorHandle } from "../features/markdown/MarkdownEditor";
 import { applyMarkdownFormat } from "../features/markdown/formatMarkdown";
 import type { MarkdownFormatAction } from "../features/markdown/formatMarkdown";
+import {
+  applyBlockCommand,
+  blockPrefixEnd,
+  type BlockCommandId,
+  type TableSize,
+} from "../features/markdown/blockCommands";
+import { BlockCommandMenu } from "./BlockCommandMenu";
+import type { BlockMenuAnchor } from "./BlockCommandMenu";
 import { showToast } from "./Toast";
 import {
   createScrollSyncMap,
@@ -155,6 +163,53 @@ function runEditorCommand(textarea: HTMLTextAreaElement | null, command: "undo" 
   return document.execCommand(command);
 }
 
+/**
+ * textarea 里应用一次块命令：整行一次性替换，撤销时是一步。
+ * 工具栏入口以当前行的命令位置作为空区间（即"把这一行变成目标块"）。
+ */
+function applyBlockToTextarea(
+  textarea: HTMLTextAreaElement,
+  id: BlockCommandId,
+  translate: TFunction,
+  setContent: (value: string) => void,
+  markDirty: () => void,
+  tableSize?: TableSize,
+): boolean {
+  const lineFrom = textarea.value.lastIndexOf("\n", Math.max(0, textarea.selectionStart - 1)) + 1;
+  const lineTo = textarea.value.indexOf("\n", textarea.selectionStart);
+  const lineText = textarea.value.slice(lineFrom, lineTo < 0 ? textarea.value.length : lineTo);
+  const tokenPos = lineFrom + blockPrefixEnd(lineText);
+
+  const result = applyBlockCommand(textarea.value, tokenPos, tokenPos, id, translate, {
+    tableSize,
+  });
+  if (!result) return false;
+
+  const { value } = textarea;
+  const next =
+    value.slice(0, result.change.from) + result.change.insert + value.slice(result.change.to);
+  const scrollTop = textarea.scrollTop;
+
+  textarea.focus();
+  // 全选替换会让 textarea 跳到顶部，先记下滚动位置再还原
+  textarea.setSelectionRange(0, value.length);
+  document.execCommand("insertText", false, next);
+  setContent(next);
+  markDirty();
+  requestAnimationFrame(() => {
+    textarea.setSelectionRange(result.anchor, result.head);
+    textarea.scrollTop = scrollTop;
+  });
+  return true;
+}
+
+/** 工具栏 `/` 按钮在 textarea 里的锚点：按钮正下方 */
+function blockMenuAnchor(trigger: HTMLElement | null): BlockMenuAnchor {
+  const rect = trigger?.getBoundingClientRect();
+  if (!rect) return { x: 24, y: 96 };
+  return { x: rect.left, y: rect.bottom + 6 };
+}
+
 export function pinTileButtonTitle(isPinned: boolean): string {
   return isPinned ? "取消钉屏" : "钉到屏幕";
 }
@@ -198,7 +253,7 @@ export function MainWindow({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(
-    normalizeViewMode(initialConfig?.defaultViewMode ?? "split"),
+    normalizeViewMode(initialConfig?.defaultViewMode ?? "live"),
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [content, setContent] = useState("");
@@ -246,6 +301,9 @@ export function MainWindow({
   const [categoryMenuClosing, setCategoryMenuClosing] = useState(false);
   const [categoryMenuConfirmDelete, setCategoryMenuConfirmDelete] = useState(false);
   const [categoryMenuHoverSuppressed, setCategoryMenuHoverSuppressed] = useState(false);
+  /** textarea 模式的块菜单位置；null 表示未打开 */
+  const [blockMenu, setBlockMenu] = useState<BlockMenuAnchor | null>(null);
+  const blockMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const { popupRef: noteMenuRef, popupPosition: noteMenuPosition } = useViewportPopupPosition(
     noteMenu,
     `${noteMenuMode}:${categories.length}`,
@@ -330,7 +388,13 @@ export function MainWindow({
     [t],
   );
   const toolbarButtons = useMemo<
-    { label: string; title: string; style: string; action: MarkdownFormatAction }[]
+    {
+      label: string;
+      title: string;
+      style: string;
+      action: MarkdownFormatAction;
+      icon?: React.ReactNode;
+    }[]
   >(
     () => [
       {
@@ -344,6 +408,34 @@ export function MainWindow({
         title: t("main.toolbar.italic", { defaultValue: "斜体" }),
         style: "italic",
         action: "italic",
+      },
+      {
+        label: "S",
+        title: t("main.toolbar.strike", { defaultValue: "删除线" }),
+        style: "line-through",
+        action: "strike",
+      },
+      {
+        label: "link",
+        title: t("main.toolbar.link", { defaultValue: "链接" }),
+        style: "",
+        action: "link",
+        icon: (
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+        ),
       },
       {
         label: "H",
@@ -1462,6 +1554,42 @@ export function MainWindow({
     saveStateRef.current = "dirty";
     setSaveState("dirty");
   };
+
+  /** 工具栏 `/` 与 Ctrl+/：实时模式走编辑器补全，textarea 模式弹出块面板 */
+  const openBlockMenu = useCallback(() => {
+    if (viewModeRef.current === "live") {
+      liveEditorRef.current?.openBlockMenu();
+      return;
+    }
+    if (!contentRef.current) return;
+    setBlockMenu(blockMenuAnchor(blockMenuTriggerRef.current));
+  }, []);
+
+  const closeBlockMenu = useCallback(() => setBlockMenu(null), []);
+
+  const selectBlockCommand = useCallback(
+    (id: BlockCommandId, tableSize?: TableSize) => {
+      setBlockMenu(null);
+      const textarea = contentRef.current;
+      if (textarea) applyBlockToTextarea(textarea, id, t, setContent, markDirty, tableSize);
+    },
+    // markDirty 与 setContent 都是稳定引用，无需进入依赖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t],
+  );
+
+  // Ctrl+/（macOS 为 ⌘/）打开块面板；实时模式交给编辑器自己的 keymap
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "/" || !(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (viewModeRef.current === "live") return;
+      if (!contentRef.current || contentRef.current.disabled) return;
+      event.preventDefault();
+      setBlockMenu(blockMenuAnchor(blockMenuTriggerRef.current));
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const ensureNoteSaved = useCallback(async (): Promise<string | null> => {
     if (selectedId) return selectedId;
@@ -2842,6 +2970,17 @@ export function MainWindow({
                       }}
                     >
                       <div className="flex items-center gap-0.5 px-4 pt-2 pb-1 shrink-0">
+                        <button
+                          ref={blockMenuTriggerRef}
+                          title={t("main.slash.insert", {
+                            defaultValue: "插入块（输入 / 或 Ctrl+/）",
+                          })}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={openBlockMenu}
+                          className="w-6 h-6 mr-0.5 flex items-center justify-center rounded text-[13px] font-mono text-bamboo/70 hover:text-bamboo hover:bg-bamboo-mist/60 transition-all cursor-pointer"
+                        >
+                          /
+                        </button>
                         {toolbarButtons.map((button) => (
                           <button
                             key={button.label}
@@ -2864,7 +3003,7 @@ export function MainWindow({
                             }}
                             className={`w-6 h-6 flex items-center justify-center rounded text-[11px] text-ink-ghost hover:text-ink-faint hover:bg-paper-warm transition-all cursor-pointer ${button.style}`}
                           >
-                            {button.label}
+                            {button.icon ?? button.label}
                           </button>
                         ))}
                       </div>
@@ -3066,6 +3205,13 @@ export function MainWindow({
           </div>
         </div>
       </div>
+      {blockMenu && (
+        <BlockCommandMenu
+          anchor={blockMenu}
+          onSelect={selectBlockCommand}
+          onClose={closeBlockMenu}
+        />
+      )}
       {noteMenu && noteMenuTarget && (
         <div
           ref={noteMenuRef}

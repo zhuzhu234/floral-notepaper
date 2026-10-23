@@ -19,10 +19,15 @@ import { useTranslation } from "react-i18next";
 import { livePreviewMarkdown } from "./livePreviewLanguage";
 import { livePreviewExtension, type LivePreviewOptions } from "./livePreview";
 import { applyMarkdownFormat, type MarkdownFormatAction } from "./formatMarkdown";
+import { openSlashMenu, slashMenuExtension } from "./slashMenu";
+import { selectionToolbarExtension } from "./selectionToolbar";
+import { tableGridExtension } from "./tableGrid";
 
 export interface MarkdownEditorHandle {
   focus: () => void;
   applyFormat: (action: MarkdownFormatAction) => void;
+  /** 在光标处打开行首 `/` 块菜单（工具栏入口） */
+  openBlockMenu: () => void;
   undo: () => void;
   redo: () => void;
   /** 在光标处插入文本（图片粘贴等场景），自动补齐前后换行 */
@@ -120,6 +125,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         EditorView.lineWrapping,
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         livePreviewMarkdown,
+        slashMenuExtension(() => translateRef.current),
+        tableGridExtension(() => translateRef.current),
+        selectionToolbarExtension(() => translateRef.current),
         liveOptionsCompartment.current.of(livePreviewExtension(buildLiveOptions())),
         fontSizeCompartment.current.of(
           EditorView.theme({ ".cm-content": { fontSize: `${fontSize}px` } }),
@@ -272,6 +280,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             scrollIntoView: true,
           });
           view.focus();
+        },
+        openBlockMenu: () => {
+          const view = viewRef.current;
+          if (!view) return;
+          view.focus();
+          openSlashMenu(view);
         },
         insertAtCursor: (text) => {
           const view = viewRef.current;

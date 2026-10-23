@@ -110,11 +110,12 @@ describe("settings api", () => {
     });
   });
 
-  test("normalizes supported view modes and falls back to split", () => {
+  test("normalizes supported view modes and falls back to live", () => {
     expect(normalizeViewMode("edit")).toBe("edit");
+    expect(normalizeViewMode("live")).toBe("live");
     expect(normalizeViewMode("split")).toBe("split");
     expect(normalizeViewMode("preview")).toBe("preview");
-    expect(normalizeViewMode("unknown")).toBe("split");
+    expect(normalizeViewMode("unknown")).toBe("live");
   });
 
   test("chooses a data directory through the folder picker", async () => {

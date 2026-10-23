@@ -105,8 +105,10 @@
       "codeText": "代码",
       "headingText": "标题",
       "italicText": "斜体文本",
+      "linkText": "链接文字",
       "listItem": "列表项",
-      "quoteText": "引用文本"
+      "quoteText": "引用文本",
+      "strikeText": "删除线文本"
     },
     "search": {
       "empty": "还没有笔记",
@@ -122,6 +124,33 @@
       "cleanUnused": "清理未使用图片",
       "cleaned": "已清理 {{count}} 张图片",
       "cleanedNone": "没有需要清理的图片"
+    },
+    "slash": {
+      "insert": "插入块",
+      "commands": {
+        "text": "正文",
+        "h1": "标题 1",
+        "h2": "标题 2",
+        "h3": "标题 3",
+        "ul": "无序列表",
+        "ol": "有序列表",
+        "task": "待办事项",
+        "quote": "引用",
+        "code": "代码块",
+        "table": "表格",
+        "hr": "分割线",
+        "math": "公式块"
+      },
+      "table": {
+        "column": "列 {{index}}",
+        "cell": "内容",
+        "pick": "选择表格尺寸",
+        "size": "{{columns}} 列 × {{rows}} 行",
+        "hint": "方向键调整，回车插入"
+      },
+      "searchPlaceholder": "搜索块…",
+      "empty": "没有匹配的块",
+      "back": "返回"
     },
     "statusBar": {
       "byteSize": "{{size}} KB",
@@ -144,8 +173,10 @@
       "hr": "分割线",
       "inlineMath": "行内公式",
       "italic": "斜体",
+      "link": "链接",
       "ol": "有序列表",
       "quote": "引用",
+      "strike": "删除线",
       "ul": "无序列表"
     },
     "window": {

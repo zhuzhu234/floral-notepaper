@@ -48,5 +48,6 @@ export function normalizeViewMode(value: string): ViewMode {
     return value;
   }
 
-  return "split";
+  // 实时模式既是默认视图，也是无法识别的配置值的兜底
+  return "live";
 }
