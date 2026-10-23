@@ -4,16 +4,16 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum CheckSourcePreference {
-    #[default]
     MirrorChyanFirst,
+    #[default]
     GithubFirst,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum DownloadSourcePreference {
-    #[default]
     MirrorChyanFirst,
+    #[default]
     GithubFirst,
 }
 

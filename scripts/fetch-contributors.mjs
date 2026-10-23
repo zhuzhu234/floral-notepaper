@@ -10,7 +10,7 @@ function writeContributors(contributors) {
   writeFileSync(OUTPUT, JSON.stringify(contributors, null, 2) + "\n");
 }
 
-const REPO = "Achilng/floral-notepaper";
+const REPO = "zhuzhu234/floral-notepaper";
 const API_URL = `https://api.github.com/repos/${REPO}/contributors?per_page=100`;
 
 async function fetchContributors() {

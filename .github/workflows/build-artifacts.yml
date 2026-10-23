@@ -1,6 +1,9 @@
 name: Build Artifacts
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       source_type:
@@ -44,6 +47,17 @@ jobs:
         id: resolve
         shell: bash
         run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            tag="${GITHUB_REF_NAME}"
+            if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Release tags must use vMAJOR.MINOR.PATCH: $tag" >&2
+              exit 1
+            fi
+            echo "checkout_ref=${GITHUB_REF}" >> "$GITHUB_OUTPUT"
+            echo "source_label=release" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           source_type="${{ github.event.inputs.source_type }}"
           source_ref="${{ github.event.inputs.source_ref }}"
 
@@ -83,6 +97,14 @@ jobs:
         id: version
         shell: bash
         run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            version="${GITHUB_REF_NAME#v}"
+            version_label="$(printf '%s' "$version" | sed 's#[^A-Za-z0-9._-]#-#g')"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "version_label=$version_label" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           input_version="${{ github.event.inputs.version }}"
 
           if [ -n "$input_version" ]; then
@@ -218,19 +240,7 @@ jobs:
         run: npm ci
 
       - name: Set version
-        run: |
-          ver='${{ needs.prepare-build.outputs.version }}'
-          cat > set-version.cjs << 'SCRIPT'
-          const fs = require("fs");
-          const ver = process.argv[2];
-          const conf = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
-          conf.version = ver;
-          fs.writeFileSync("src-tauri/tauri.conf.json", JSON.stringify(conf, null, 2));
-          let toml = fs.readFileSync("src-tauri/Cargo.toml", "utf8");
-          toml = toml.replace(/^version = "[^"]*"/m, 'version = "' + ver + '"');
-          fs.writeFileSync("src-tauri/Cargo.toml", toml);
-          SCRIPT
-          node set-version.cjs "$ver"
+        run: node scripts/set-version.mjs '${{ needs.prepare-build.outputs.version }}'
 
       - name: Build
         run: npm run tauri build
@@ -302,7 +312,7 @@ jobs:
       - name: Set version and signing mode
         run: |
           ver='${{ needs.prepare-build.outputs.version }}'
-          disable_signing='${{ inputs.disable_signing }}'
+          disable_signing='${{ github.event_name == 'push' || inputs.disable_signing }}'
           if [ "$disable_signing" = "true" ]; then
             node scripts/set-version.mjs "$ver" --disable-macos-signing
           else
@@ -365,7 +375,7 @@ jobs:
       - name: Set version and signing mode
         run: |
           ver='${{ needs.prepare-build.outputs.version }}'
-          disable_signing='${{ inputs.disable_signing }}'
+          disable_signing='${{ github.event_name == 'push' || inputs.disable_signing }}'
           if [ "$disable_signing" = "true" ]; then
             node scripts/set-version.mjs "$ver" --disable-macos-signing
           else
@@ -395,3 +405,67 @@ jobs:
           path: release-assets/*
           if-no-files-found: error
           retention-days: 14
+
+  publish-github-release:
+    name: Publish GitHub Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - prepare-build
+      - build-windows
+      - build-linux
+      - build-macos-x86_64
+      - build-macos-aarch64
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: floral-notepaper-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ needs.prepare-build.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          find release-assets -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            | sed 's#  release-assets/#  #' \
+            > release-assets/SHA256SUMS.txt
+
+          notes_file="Docs/release-note/${RELEASE_VERSION}.md"
+          if [ ! -f "$notes_file" ]; then
+            notes_file="$(mktemp)"
+            printf '%s\n' \
+              "$RELEASE_TAG" \
+              "" \
+              "- Windows x64 安装包和便携版" \
+              "- macOS Apple Silicon / Intel DMG" \
+              "- Linux deb、rpm、AppImage" \
+              > "$notes_file"
+          fi
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TAG" \
+              --notes-file "$notes_file" \
+              --verify-tag
+          fi

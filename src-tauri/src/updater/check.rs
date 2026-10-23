@@ -23,7 +23,7 @@ use std::{
 const MIRROR_CHYAN_MANIFEST_PATH_ENV: &str = "FLORAL_NOTEPAPER_UPDATE_MIRROR_MANIFEST_PATH";
 const GITHUB_MANIFEST_PATH_ENV: &str = "FLORAL_NOTEPAPER_UPDATE_GITHUB_MANIFEST_PATH";
 const GITHUB_REPO_ENV: &str = "FLORAL_NOTEPAPER_UPDATE_GITHUB_REPO";
-const DEFAULT_GITHUB_REPO: &str = "Achilng/floral-notepaper";
+const DEFAULT_GITHUB_REPO: &str = "zhuzhu234/floral-notepaper";
 const MIRROR_CHYAN_API_BASE: &str = "https://mirrorchyan.com/api/resources";
 const MIRROR_CHYAN_RES_ID: &str = "floral";
 const MIRROR_CHYAN_RES_ID_OVERRIDE_ENV: &str = "FLORAL_NOTEPAPER_MIRROR_CHYAN_RES_ID";
@@ -123,7 +123,9 @@ impl MirrorChyanProvider {
         Self {
             manifest_path: env_manifest_path(MIRROR_CHYAN_MANIFEST_PATH_ENV),
             cdk: None,
-            offline: env::var("FLORAL_NOTEPAPER_UPDATE_OFFLINE").is_ok(),
+            // Mirror酱只提供上游花笺。这个分支的应用内更新走自己的 GitHub Releases，
+            // 避免检查到官方版本后把安装覆盖成上游包。测试清单路径仍可注入。
+            offline: true,
         }
     }
 

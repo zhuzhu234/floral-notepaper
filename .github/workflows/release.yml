@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  # 这个流程依赖 SignPath 和 Microsoft Store。当前仓库的多平台安装包由
+  # build-artifacts.yml 在推送 v* 标签时直接发布，所以这里不再监听标签。
   workflow_dispatch:
     inputs:
       tag:

@@ -78,8 +78,8 @@ impl Default for StoredUpdateSettings {
             auto_check: true,
             auto_download: false,
             check_interval_hours: 24,
-            check_source_preference: CheckSourcePreference::MirrorChyanFirst,
-            download_source_preference: DownloadSourcePreference::MirrorChyanFirst,
+            check_source_preference: CheckSourcePreference::GithubFirst,
+            download_source_preference: DownloadSourcePreference::GithubFirst,
             channel: UpdateChannel::Stable,
             allow_prerelease: false,
             last_auto_check_at: None,
@@ -165,11 +165,11 @@ mod tests {
         assert_eq!(settings.check_interval_hours, 24);
         assert_eq!(
             settings.check_source_preference,
-            CheckSourcePreference::MirrorChyanFirst
+            CheckSourcePreference::GithubFirst
         );
         assert_eq!(
             settings.download_source_preference,
-            DownloadSourcePreference::MirrorChyanFirst
+            DownloadSourcePreference::GithubFirst
         );
         assert!(paths.settings_path().exists());
     }
