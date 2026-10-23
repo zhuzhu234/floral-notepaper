@@ -1213,12 +1213,22 @@ export function MainWindow({
     settingsConfig?.externalFileAutoSave,
   ]);
 
-  const handleNewNote = async () => {
+  const handleNewNote = async (category?: string) => {
+    const targetCategory = category ?? activeCategory;
     await saveCurrentNote();
     try {
-      const note = await createNote({ title: "", content: "", category: activeCategory });
+      const note = await createNote({ title: "", content: "", category: targetCategory });
       replaceNoteMetadata(note);
       applyNote(note);
+      setActiveCategory(targetCategory);
+      if (targetCategory) {
+        setCollapsedCategories((prev) => {
+          if (!prev.has(targetCategory)) return prev;
+          const next = new Set(prev);
+          next.delete(targetCategory);
+          return next;
+        });
+      }
     } catch (error) {
       showToast(getErrorMessage(error));
     }
@@ -1351,6 +1361,7 @@ export function MainWindow({
 
   const handleSelectNote = async (id: string) => {
     if (id === selectedId) return;
+    setActiveCategory(notesRef.current.find((note) => note.id === id)?.category ?? "");
     setDeleteConfirm(false);
     // 排队保存：等待可能在途的自动保存，并把尚未落盘的修改一并存掉
     await saveCurrentNote();
@@ -2232,7 +2243,15 @@ export function MainWindow({
 
               <div className="px-3 pb-2 shrink-0 space-y-1">
                 <button
-                  onClick={handleNewNote}
+                  onClick={() => void handleNewNote()}
+                  title={
+                    activeCategory
+                      ? t("main.category.newNoteIn", {
+                          category: activeCategory,
+                          defaultValue: "在「{{category}}」中新建笔记",
+                        })
+                      : undefined
+                  }
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] font-body text-bamboo hover:bg-bamboo-mist/60 transition-all cursor-pointer group"
                 >
                   <svg
@@ -2247,7 +2266,14 @@ export function MainWindow({
                   >
                     <path d="M12 5v14M5 12h14" />
                   </svg>
-                  <span>{t("main.sidebar.newNote", { defaultValue: "新建笔记" })}</span>
+                  <span className="truncate">
+                    {activeCategory
+                      ? t("main.category.newNoteIn", {
+                          category: activeCategory,
+                          defaultValue: "在「{{category}}」中新建笔记",
+                        })
+                      : t("main.sidebar.newNote", { defaultValue: "新建笔记" })}
+                  </span>
                 </button>
                 <button
                   onClick={() => void handleImportNote()}
@@ -2507,6 +2533,7 @@ export function MainWindow({
                     }
 
                     const isCollapsed = collapsedCategories.has(group.category);
+                    const isActiveCategory = activeCategory === group.category;
 
                     return (
                       <div key={group.category} className="px-2 mb-0.5">
@@ -2514,11 +2541,18 @@ export function MainWindow({
                           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg group/cat cursor-pointer select-none transition-all duration-200 ${
                             dragOverCategory === group.category
                               ? "bg-bamboo/15 border border-bamboo/40 ring-1 ring-bamboo/20"
-                              : isCollapsed
-                                ? "bg-transparent border border-bamboo/15"
-                                : "bg-bamboo/8 border border-bamboo/15 rounded-b-none"
+                              : isActiveCategory
+                                ? isCollapsed
+                                  ? "bg-bamboo/12 border border-bamboo/40"
+                                  : "bg-bamboo/12 border border-bamboo/40 rounded-b-none"
+                                : isCollapsed
+                                  ? "bg-transparent border border-bamboo/15"
+                                  : "bg-bamboo/8 border border-bamboo/15 rounded-b-none"
                           }`}
-                          onClick={() => toggleCategoryCollapse(group.category)}
+                          onClick={() => {
+                            setActiveCategory(group.category);
+                            toggleCategoryCollapse(group.category);
+                          }}
                           onContextMenu={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -2684,6 +2718,19 @@ export function MainWindow({
                                 );
                               })
                             )}
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleNewNote(group.category);
+                              }}
+                              className="mx-1 mt-0.5 mb-0.5 flex w-[calc(100%-0.5rem)] items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-[11px] font-body text-bamboo/80 hover:bg-bamboo-mist/50 hover:text-bamboo transition-colors cursor-pointer"
+                            >
+                              <span className="text-[12px] leading-none">+</span>
+                              <span>
+                                {t("main.sidebar.newNote", { defaultValue: "新建笔记" })}
+                              </span>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -3321,6 +3368,16 @@ export function MainWindow({
             </div>
           ) : (
             <div key="category-main" className="animate-menu-slide-right">
+              <button
+                onClick={() => {
+                  const category = categoryMenu.category;
+                  setCategoryMenuClosing(true);
+                  void handleNewNote(category);
+                }}
+                className="w-full text-left px-3 py-1.5 text-[12px] font-body text-ink-soft hover:bg-bamboo-mist/60 hover:text-bamboo transition-colors cursor-pointer"
+              >
+                {t("main.sidebar.newNote", { defaultValue: "新建笔记" })}
+              </button>
               <button
                 onClick={() => {
                   setCategoryMenuClosing(true);

@@ -75,6 +75,7 @@
       "delete": "刪除分類",
       "emptyFolder": "空資料夾",
       "new": "新增分類",
+      "newNoteIn": "在「{{category}}」中新增筆記",
       "placeholder": "輸入分類名稱…",
       "rename": "重新命名",
       "uncategorized": "未分類"

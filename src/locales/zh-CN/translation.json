@@ -75,6 +75,7 @@
       "delete": "删除分类",
       "emptyFolder": "空文件夹",
       "new": "新建分类",
+      "newNoteIn": "在「{{category}}」中新建笔记",
       "placeholder": "输入分类名…",
       "rename": "重命名",
       "uncategorized": "未分类"
